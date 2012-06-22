@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# multilibpkg
+# Copyright(c) 2012 Eduardo Ramos <freedom.trinity@gmail.com>
+# Copyright(c) 2012 Luiz Coura <luizcoura@gmail.com> - colaborator
+# MIT Licensed
 
 URL="http://connie.slackware.com/~alien/multilib/current"
 LIB="/var/lib/multilibpkg"

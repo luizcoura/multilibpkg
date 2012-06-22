@@ -4,15 +4,16 @@ multilibpkg
 Slackware Multilib Pakage Manager (http://alien.slackbook.org/dokuwiki/doku.php?id=slackware:multilib)
 
 
-## Installation
+# Installation
 
     $ git clone https://github.com/luizcoura/multilibpkg.git
     $ mkdir -p /var/lib/multilibpkg
     $ mkdir -p /var/cache/multilibpkg
 
-## Usage
+# Usage
 
-    $ multilib -h
+    $ cd multilibpkg
+    $ ./multilibpkg -h
     usage: ./multilibpkg command
 
       u | update            Build repository index locally.
