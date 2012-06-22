@@ -1,0 +1,131 @@
+#!/bin/bash
+
+URL="http://connie.slackware.com/~alien/multilib/current"
+LIB="/var/lib/multilibpkg"
+CACHE="/var/cache/multilibpkg"
+LOCK="/var/run/multilib.lock"
+
+touch $LOCK
+
+function invert() {
+  echo $1 | sed 's/./&\n/g' | tac | tr -d '\n'
+}
+
+function _exit() {
+  rm -rf $LOCK
+  exit
+}
+
+function checkupdate() {
+  if [ "`whoami`" != "root" ] ; then
+    echo "You must run as root"
+    _exit
+  fi
+
+  cd $LIB
+
+  echo "[Check updates]"
+  echo " Downloading file list..."
+  lftp -c "open $URL ; find" | egrep "txz$" > remote 
+  find /var/log/packages \( -name '*compat32*' -o -name '*multilib*' \) | awk -F'/' '{print $5}' > local
+
+  echo " Build indexes..."
+  while read line ; do
+    line=`basename $line`
+    inv=`invert $line`
+    build=$(invert `echo $inv | cut -d'-' -f'1'` | sed 's/\.t.z//g')
+    arch=$(invert `echo $inv | cut -d'-' -f'2'`)
+    version=$(invert `echo $inv | cut -d'-' -f'3'`)
+    name=$(invert `echo $inv | cut -d'-' -f'4,5,6,7'`)
+    echo "$name:$version:$arch:$build" >> local.db
+  done < local
+
+  while read line ; do
+    line=`basename $line`
+    inv=`invert $line`
+    build=$(invert `echo $inv | cut -d'-' -f'1'` | sed 's/\.t.z//g')
+    arch=$(invert `echo $inv | cut -d'-' -f'2'`)
+    version=$(invert `echo $inv | cut -d'-' -f'3'`)
+    name=$(invert `echo $inv | cut -d'-' -f'4,5,6,7'`)
+    echo "$name:$version:$arch:$build" >> remote.db
+  done < remote
+
+  echo " Checking new packages and/or updates..."
+
+  for i in `cat remote.db` ; do
+    name=`echo $i | cut -d ':' -f1`
+    rversion=`echo $i | cut -d ':' -f 2`
+    rbuild=`echo $i | cut -d ':' -f 4`
+    [[ -f local.db ]] && lversion=`grep "$name:" local.db | cut -d ':' -f 2`
+    [[ -f local.db ]] && lbuild=`grep "$name:" local.db | cut -d ':' -f 4`
+    if [ -z "$lversion" ] ; then
+      remotepath=`grep "$name-$rversion" remote`
+      package="`echo $i | sed 's/:/-/g'`.`echo $remotepath | cut -d '.' -f 3`"
+      echo $URL/$remotepath >> download.list
+    elif [[ "$rversion$rbuild" > "$lversion$lbuild" ]] ; then
+      remotepath=`grep "$name-$rversion" remote`
+      package="`echo $i | sed 's/:/-/g'`.`echo $remotepath | cut -d '.' -f 3`"
+      echo $URL/$remotepath >> download.list
+    else
+      echo "Updated $name" 1> /dev/null
+    fi
+  done
+}
+
+function downloadpackages() {
+  cd $LIB
+  np=`wc -l download.list | cut -d ' ' -f1`
+  echo "[Download]"
+  while read line ; do
+    package=$(basename $line)
+    echo "[$np] $package"
+    curl -# -L -C - -o $CACHE/$package $line
+    np=`expr $np - 1`
+  done < download.list
+}
+
+function installpackages() {
+  cd $CACHE
+  echo "[Install/Update]"
+  for i in * ; do
+    echo "upgradepkg --reinstall --install-new packages/$i"
+  done
+}
+
+function usage() {
+  echo "Usage: $0 command"
+  echo ""
+  echo "  u | update            Build repository index locally."
+  echo "  d | download          Download packages only, do not install."
+  echo "  i | install           Download and install packages."
+  echo "  h | help              Show this help."
+  echo ""
+  _exit
+}
+
+trap _exit INT
+
+if [ ! -d $LIB ] ; then
+  echo "Please create $LIB as root"
+  _exit
+elif [ ! -d $CACHE ] ; then
+  echo "Please create $CACHE as root"
+  _exit
+fi
+
+case "$1" in
+  update|u)
+    checkupdate
+    ;;
+  download|d)
+    downloadpackages
+    ;;
+  install|i)
+    installpackages
+    ;;
+  *)
+    usage
+    ;;
+esac
+
+_exit
