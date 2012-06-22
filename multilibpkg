@@ -93,7 +93,7 @@ function installpackages() {
   cd $CACHE
   echo "[Install/Update]"
   for i in * ; do
-    echo "upgradepkg --reinstall --install-new packages/$i"
+    upgradepkg --reinstall --install-new $CACHE/$i
   done
 }
 
