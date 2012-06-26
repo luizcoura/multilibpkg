@@ -28,12 +28,15 @@ function checkupdate() {
   fi
 
   cd $LIB
+  cat /dev/null > local
+  cat /dev/null > remote
+  cat /dev/null > download.list
 
   echo "[Check updates]"
   echo " Downloading file list..."
-  lftp -c "open $URL ; find" | egrep "txz$" > remote 
+  lftp -c "open $URL ; find" | egrep "t[gx]z$" > remote 
   find /var/log/packages \( -name '*compat32*' -o -name '*multilib*' \) | awk -F'/' '{print $5}' > local
-
+  
   echo " Build indexes..."
   while read line ; do
     line=`basename $line`
@@ -48,12 +51,17 @@ function checkupdate() {
   while read line ; do
     line=`basename $line`
     inv=`invert $line`
-    build=$(invert `echo $inv | cut -d'-' -f'1'` | sed 's/\.t.z//g')
+    build=$(invert `echo $inv | cut -d'-' -f'1'` | sed 's/\.t[gx]z//g')
     arch=$(invert `echo $inv | cut -d'-' -f'2'`)
     version=$(invert `echo $inv | cut -d'-' -f'3'`)
     name=$(invert `echo $inv | cut -d'-' -f'4,5,6,7'`)
     echo "$name:$version:$arch:$build" >> remote.db
   done < remote
+  
+  cat remote.db | sort -u > remote.sort
+  cat local.db | sort -u > local.sort
+  mv remote.sort remote.db
+  mv local.sort local.db
 
   echo " Checking new packages and/or updates..."
 
@@ -75,6 +83,8 @@ function checkupdate() {
       echo "Updated $name" 1> /dev/null
     fi
   done
+  
+  echo "  `wc -l download.list | cut -d ' ' -f1` package(s) to update"
 }
 
 function downloadpackages() {
@@ -84,7 +94,7 @@ function downloadpackages() {
   while read line ; do
     package=$(basename $line)
     echo "[$np] $package"
-    curl -# -L -C - -o $CACHE/$package $line
+    curl -# -L -f -C - -o $CACHE/$package $line
     np=`expr $np - 1`
   done < download.list
 }
@@ -95,6 +105,8 @@ function installpackages() {
   for i in * ; do
     upgradepkg --reinstall --install-new $CACHE/$i
   done
+  echo "  Cleaning cache..."
+  rm -f $CACHE/$i
 }
 
 function usage() {
