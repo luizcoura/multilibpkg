@@ -6,14 +6,13 @@ Slackware Multilib Pakage Manager (http://alien.slackbook.org/dokuwiki/doku.php?
 
 # Installation
 
-    $ git clone https://github.com/luizcoura/multilibpkg.git
-    $ mkdir -p /var/lib/multilibpkg
-    $ mkdir -p /var/cache/multilibpkg
+    # git clone https://github.com/luizcoura/multilibpkg.git
+    # mkdir -p /var/lib/multilibpkg && mkdir -p /var/cache/multilibpkg
 
 # Usage
 
-    $ cd multilibpkg
-    $ ./multilibpkg help
+    # cd multilibpkg
+    # ./multilibpkg help
     usage: ./multilibpkg command
 
       u | update            Build repository index locally.
