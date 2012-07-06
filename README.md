@@ -13,7 +13,7 @@ Slackware Multilib Pakage Manager (http://alien.slackbook.org/dokuwiki/doku.php?
 # Usage
 
     $ cd multilibpkg
-    $ ./multilibpkg -h
+    $ ./multilibpkg help
     usage: ./multilibpkg command
 
       u | update            Build repository index locally.
