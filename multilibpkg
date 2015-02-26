@@ -5,7 +5,7 @@
 # Copyright(c) 2012 Luiz Coura <luizcoura@gmail.com> - colaborator
 # MIT Licensed
 
-URL="http://connie.slackware.com/~alien/multilib/current"
+URL="http://connie.slackware.com/~alien/multilib/current/"
 LIB="/var/lib/multilibpkg"
 CACHE="/var/cache/multilibpkg"
 LOCK="/var/run/multilib.lock"
@@ -38,14 +38,16 @@ function checkupdate() {
   fi
 
   cd $LIB
-  cat /dev/null > local
-  cat /dev/null > remote
-  cat /dev/null > download.list
+  > local
+  > local.db
+  > remote
+  > remote.db
+  > download.list
 
   echo "[Check updates]"
   echo " Downloading file list..."
-  lftp -c "open $URL ; find" | egrep "t[gx]z$" > remote 
-  find /var/log/packages \( -name '*compat32*' -o -name '*multilib*' \) | awk -F'/' '{print $5}' > local
+  curl -s http://www.slackware.com/~alien/multilib/current/PACKAGES.TXT | gawk 'match($0, /PACKAGE NAME:  (.*)$/, a) { print a[1]}' | tee remote 
+  find /var/log/packages \( -name '*compat32*' -o -name '*multilib*' \) | gawk -F'/' '{print $5}' > local
   
   echo " Build indexes..."
   while read line ; do
@@ -84,13 +86,15 @@ function checkupdate() {
     if [ -z "$lversion" ] ; then
       remotepath=`grep "$name-$rversion" remote`
       package="`echo $i | sed 's/:/-/g'`.`echo $remotepath | cut -d '.' -f 3`"
+      echo "[*] $name"
       echo $URL/$remotepath >> download.list
     elif [[ "$rversion$rbuild" > "$lversion$lbuild" ]] ; then
       remotepath=`grep "$name-$rversion" remote`
       package="`echo $i | sed 's/:/-/g'`.`echo $remotepath | cut -d '.' -f 3`"
+      echo "[+] $name"
       echo $URL/$remotepath >> download.list
     else
-      echo "Updated $name" 1> /dev/null
+      echo "[=] $name"
     fi
   done
   
