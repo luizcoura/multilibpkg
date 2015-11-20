@@ -5,7 +5,7 @@
 # Copyright(c) 2012 Luiz Coura <luizcoura@gmail.com> - colaborator
 # MIT Licensed
 
-URL="http://connie.slackware.com/~alien/multilib/current/"
+URL="http://www.slackware.com/~alien/multilib/current/"
 LIB="/var/lib/multilibpkg"
 CACHE="/var/cache/multilibpkg"
 LOCK="/var/run/multilib.lock"
@@ -46,7 +46,8 @@ function checkupdate() {
 
   echo "[Check updates]"
   echo " Downloading file list..."
-  curl -s http://www.slackware.com/~alien/multilib/current/PACKAGES.TXT | gawk 'match($0, /PACKAGE NAME:  (.*)$/, a) { print a[1]}' | tee remote 
+  curl -s http://www.slackware.com/~alien/multilib/current/PACKAGES.TXT | gawk 'match($0, /PACKAGE NAME:  (.*)$/, a) { print a[1]}' > remote
+  curl -s http://www.slackware.com/~alien/multilib/current/PACKAGES.TXT | gawk 'match($0, /PACKAGE LOCATION:  (.*)$/, a) { print a[1]}' > remote.location
   find /var/log/packages \( -name '*compat32*' -o -name '*multilib*' \) | gawk -F'/' '{print $5}' > local
   
   echo " Build indexes..."
@@ -70,9 +71,9 @@ function checkupdate() {
     echo "$name:$version:$arch:$build" >> remote.db
   done < remote
   
-  cat remote.db | sort -u > remote.sort
-  cat local.db | sort -u > local.sort
-  mv remote.sort remote.db
+  cat remote.db > remote.sort
+  cat local.db  > local.sort
+  paste -d ':' remote.sort remote.location > remote.db
   mv local.sort local.db
 
   echo " Checking new packages and/or updates..."
@@ -81,18 +82,19 @@ function checkupdate() {
     name=`echo $i | cut -d ':' -f1`
     rversion=`echo $i | cut -d ':' -f 2`
     rbuild=`echo $i | cut -d ':' -f 4`
+    url=`echo $i | cut -d ':' -f 5`
     [[ -f local.db ]] && lversion=`grep "$name:" local.db | cut -d ':' -f 2`
     [[ -f local.db ]] && lbuild=`grep "$name:" local.db | cut -d ':' -f 4`
     if [ -z "$lversion" ] ; then
       remotepath=`grep "$name-$rversion" remote`
       package="`echo $i | sed 's/:/-/g'`.`echo $remotepath | cut -d '.' -f 3`"
       echo "[*] $name"
-      echo $URL/$remotepath >> download.list
+      echo $URL$url/$remotepath >> download.list
     elif [[ "$rversion$rbuild" > "$lversion$lbuild" ]] ; then
       remotepath=`grep "$name-$rversion" remote`
       package="`echo $i | sed 's/:/-/g'`.`echo $remotepath | cut -d '.' -f 3`"
       echo "[+] $name"
-      echo $URL/$remotepath >> download.list
+      echo $URL$url/$remotepath >> download.list
     else
       echo "[=] $name"
     fi
